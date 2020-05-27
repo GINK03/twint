@@ -61,7 +61,7 @@ def Json(obj, config):
 
         # base = addExt(config.Output, _obj_type, "json")
         base = config.Output
-        print(__file__, "InJson", base, data["link"], data)
+        # print(__file__, "InJson", base, data["link"], data)
         """
         cacheのために書き込み
         """

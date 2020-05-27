@@ -184,7 +184,7 @@ async def Tweet(url, config, conn):
     digest = sha224(bytes(parse, "utf8")).hexdigest()
     HOME = E.get("HOME")
     if not Path(f"{HOME}/.mnt/cache/twinbee/{digest}").exists():
-        print(__file__, "URL", url, parse)
+        # print(__file__, "URL", url, parse)
         try:
             response = await Request(url)
             soup = BeautifulSoup(response, "lxml")
@@ -195,7 +195,7 @@ async def Tweet(url, config, conn):
             logme.critical(__name__+':Tweet:' + str(e))
     else:
         # こっちはcacheのハンドル
-        print("recover from caches")
+        print("recover from caches", config.Username)
         with open(f"{HOME}/.mnt/cache/twinbee/{digest}", "rb") as fp:
             data = json.loads(gzip.decompress(fp.read()).decode())
         write.Json(data, config)
