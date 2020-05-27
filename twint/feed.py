@@ -19,13 +19,13 @@ def Follow(response):
 
 def Mobile(response):
     logme.debug(__name__+':Mobile')
-    soup = BeautifulSoup(response, "html.parser")
+    soup = BeautifulSoup(response, "lxml")
     tweets = soup.find_all("span", "metadata")
     max_id = soup.find_all("div", "w-button-more")
     try:
         max_id = findall(r'max_id=(.*?)">', str(max_id))[0]
     except Exception as e:
-        print(__file__,':Mobile:' + str(e))
+        #print(__file__,':Mobile:' + str(e), str(max_id))
         ...
 
     return tweets, max_id

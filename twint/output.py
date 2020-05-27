@@ -67,6 +67,11 @@ def is_tweet(tw):
         logme.critical(__name__+':is_tweet:False')
         return False
 
+from urllib.parse import urlparse
+from hashlib import sha224
+from pathlib import Path
+from os import environ as E
+HOME = E.get("HOME")
 def _output(obj, output, config, **extra):
     logme.debug(__name__+':_output')
     if config.Lowercase:
@@ -90,31 +95,9 @@ def _output(obj, output, config, **extra):
             logme.info('_output:Lowercase:hiddenTweetFound')
             print("[x] Hidden tweet found, account suspended due to violation of TOS")
             return
-    if config.Output != None:
-        if config.Store_csv:
-            try:
-                write.Csv(obj, config)
-                logme.debug(__name__+':_output:CSV')
-            except Exception as e:
-                logme.critical(__name__+':_output:CSV:Error:' + str(e))
-                print(str(e) + " [x] output._output")
-        elif config.Store_json:
-            write.Json(obj, config)
-            logme.debug(__name__+':_output:JSON')
-        else:
-            write.Text(output, config.Output)
-            logme.debug(__name__+':_output:Text')
-
-    if config.Elasticsearch:
-        logme.debug(__name__+':_output:Elasticsearch')
-        print("", end=".", flush=True)
-    else:
-        if not config.Hide_output:
-            try:
-                print(output.replace('\n', ' '))
-            except UnicodeEncodeError:
-                logme.critical(__name__+':_output:UnicodeEncodeError')
-                print("unicode error [x] output._output")
+    #print("obj", objkkkkkkkkk
+    write.Json(obj, config)
+    logme.debug(__name__+':_output:JSON')
 
 async def checkData(tweet, config, conn):
     logme.debug(__name__+':checkData')
@@ -158,6 +141,7 @@ async def Tweets(tweets, config, conn, url=''):
     if config.Favorites or config.Profile_full or config.Location:
         logme.debug(__name__+':Tweets:fav+full+loc')
         for tw in tweets:
+            # print(__file__, tw)
             if tw['data-item-id'] == url.split('?')[0].split('/')[-1]:
                 await checkData(tw, config, conn)
     elif config.TwitterSearch:

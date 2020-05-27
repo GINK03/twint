@@ -15,8 +15,12 @@ from aiohttp_socks import SocksConnector, SocksVer
 from . import url
 from .output import Tweets, Users
 from .user import inf
+from .storage import write
 
 import logging as logme
+
+from os import environ as E
+import gzip
 
 httpproxy = None
 
@@ -165,17 +169,37 @@ async def Username(_id):
     soup = BeautifulSoup(r, "lxml")
 
     return soup.find("a", "fn url alternate-context")["href"].replace("/", "")
-
+from urllib.parse import urlparse
+from hashlib import sha224
+from pathlib import Path
+import gzip
+import json
 async def Tweet(url, config, conn):
     logme.debug(__name__+':Tweet')
-    try:
-        response = await Request(url)
-        soup = BeautifulSoup(response, "lxml")
-        tweets = soup.find_all("div", "tweet")
-        await Tweets(tweets, config, conn, url)
-    except Exception as e:
-        logme.critical(__name__+':Tweet:' + str(e))
 
+    """
+    cacheを有効にする
+    """
+    parse = urlparse(url)._replace(query='').geturl()
+    digest = sha224(bytes(parse, "utf8")).hexdigest()
+    HOME = E.get("HOME")
+    if not Path(f"{HOME}/.mnt/cache/twinbee/{digest}").exists():
+        print(__file__, "URL", url, parse)
+        try:
+            response = await Request(url)
+            soup = BeautifulSoup(response, "lxml")
+            tweets = soup.find_all("div", "tweet")
+            """ 保存 """
+            await Tweets(tweets, config, conn, url)
+        except Exception as e:
+            logme.critical(__name__+':Tweet:' + str(e))
+    else:
+        # こっちはcacheのハンドル
+        print("recover from caches")
+        with open(f"{HOME}/.mnt/cache/twinbee/{digest}", "rb") as fp:
+            data = json.loads(gzip.decompress(fp.read()).decode())
+        write.Json(data, config)
+        
 async def User(url, config, conn, user_id = False):
     logme.debug(__name__+':User')
     _connector = get_connector(config)

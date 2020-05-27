@@ -2,7 +2,7 @@ from . import write_meta as meta
 import csv
 import json
 import os
-
+import gzip
 def outputExt(objType, fType):
     if objType == "str":
         objType = "username"
@@ -46,31 +46,40 @@ def createDirIfMissing(dirname):
     if not os.path.exists(dirname):
         os.makedirs(dirname)
 
-def Csv(obj, config):
-    _obj_type = obj.__class__.__name__
-    if _obj_type == "str":
-        _obj_type = "username"
-    fieldnames, row = struct(obj, config.Custom[_obj_type], _obj_type)
-    
-    base = addExt(config.Output, _obj_type, "csv")
-    
-    if not (os.path.exists(base)):
-        with open(base, "w", newline='', encoding="utf-8") as csv_file:
-            writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-            writer.writeheader()
-
-    with open(base, "a", newline='', encoding="utf-8") as csv_file:
-        writer = csv.DictWriter(csv_file, fieldnames=fieldnames)
-        writer.writerow(row)
-
+from urllib.parse import urlparse
+from hashlib import sha224
+from pathlib import Path
+import json
+from os import environ as E
+HOME = E.get("HOME")
 def Json(obj, config):
-    _obj_type = obj.__class__.__name__
-    if _obj_type == "str":
-        _obj_type = "username"
-    null, data = struct(obj, config.Custom[_obj_type], _obj_type)
+    if not isinstance(obj, dict):
+        _obj_type = obj.__class__.__name__
+        if _obj_type == "str":
+            _obj_type = "username"
+        null, data = struct(obj, config.Custom[_obj_type], _obj_type)
 
-    base = addExt(config.Output, _obj_type, "json")
+        # base = addExt(config.Output, _obj_type, "json")
+        base = config.Output
+        print(__file__, "InJson", base, data["link"], data)
+        """
+        cacheのために書き込み
+        """
+        url = data["link"]
+        parse = urlparse(url)._replace(query='').geturl()
+        digest = sha224(bytes(parse, "utf8")).hexdigest()
 
-    with open(base, "a", newline='', encoding="utf-8") as json_file:
-        json.dump(data, json_file, ensure_ascii=False)
-        json_file.write("\n")
+        with open(f"{HOME}/.mnt/cache/twinbee/{digest}", "wb") as fp:
+            ser = gzip.compress(bytes(json.dumps(data,ensure_ascii=False), "utf8"))
+            fp.write(ser)
+
+        with open(base, "a", newline='', encoding="utf-8") as json_file:
+            json.dump(data, json_file, ensure_ascii=False)
+            json_file.write("\n")
+    else:
+        base = config.Output
+        obj["CacheHit"] = "True"
+        with open(base, "a", newline='', encoding="utf-8") as json_file:
+            json.dump(obj, json_file, ensure_ascii=False)
+            json_file.write("\n")
+

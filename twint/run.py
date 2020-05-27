@@ -42,7 +42,7 @@ class Twint:
         logme.debug(__name__+':Twint:Feed')
         consecutive_errors_count = 0
         self.feed = []
-        for i in range(4): 
+        for i in range(1): 
             response = await get.RequestUrl(self.config, self.init, headers=[("User-Agent", self.user_agent)])
             _feed, self.init = feed.Mobile(response)
             self.feed += _feed
@@ -145,7 +145,6 @@ class Twint:
                     logme.debug(__name__+':Twint:main:no-more-tweets')
                     break
 
-                #logging.info("[<] " + str(datetime.now()) + ':: run+Twint+main+CallingGetLimit2')
                 if get.Limit(self.config.Limit, self.count):
                     logme.debug(__name__+':Twint:main:reachedLimit')
                     break
