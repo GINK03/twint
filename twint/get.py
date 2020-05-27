@@ -1,6 +1,7 @@
 from async_timeout import timeout
 from datetime import datetime
 from bs4 import BeautifulSoup
+import lxml
 import sys
 import socket
 import aiohttp
@@ -161,7 +162,7 @@ async def Username(_id):
     logme.debug(__name__+':Username')
     url = f"https://twitter.com/intent/user?user_id={_id}&lang=en"
     r = await Request(url)
-    soup = BeautifulSoup(r, "html.parser")
+    soup = BeautifulSoup(r, "lxml")
 
     return soup.find("a", "fn url alternate-context")["href"].replace("/", "")
 
@@ -169,7 +170,7 @@ async def Tweet(url, config, conn):
     logme.debug(__name__+':Tweet')
     try:
         response = await Request(url)
-        soup = BeautifulSoup(response, "html.parser")
+        soup = BeautifulSoup(response, "lxml")
         tweets = soup.find_all("div", "tweet")
         await Tweets(tweets, config, conn, url)
     except Exception as e:
@@ -180,7 +181,7 @@ async def User(url, config, conn, user_id = False):
     _connector = get_connector(config)
     try:
         response = await Request(url, connector=_connector)
-        soup = BeautifulSoup(response, "html.parser")
+        soup = BeautifulSoup(response, "lxml")
         if user_id:
             return int(inf(soup, "id"))
         await Users(soup, config, conn)
@@ -195,41 +196,17 @@ def Limit(Limit, count):
 async def Multi(feed, config, conn):
     logme.debug(__name__+':Multi')
     count = 0
-    try:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
-            loop = asyncio.get_event_loop()
-            futures = []
-            for tweet in feed:
-                count += 1
-                if config.Favorites or config.Profile_full:
-                    logme.debug(__name__+':Multi:Favorites-profileFull')
-                    link = tweet.find("a")["href"]
-                    url = f"https://twitter.com{link}&lang=en"
-                elif config.User_full:
-                    logme.debug(__name__+':Multi:userFull')
-                    username = tweet.find("a")["name"]
-                    url = f"http://twitter.com/{username}?lang=en"
-                else:
-                    logme.debug(__name__+':Multi:else-url')
-                    link = tweet.find("a", "tweet-timestamp js-permalink js-nav js-tooltip")["href"]
-                    url = f"https://twitter.com{link}?lang=en"
+    
+    futures = []
+    for tweet in feed:
+        count += 1
+        logme.debug(__name__+':Multi:Favorites-profileFull')
+        link = tweet.find("a")["href"]
+        url = f"https://twitter.com{link}&lang=en"
 
-                if config.User_full:
-                    logme.debug(__name__+':Multi:user-full-Run')
-                    futures.append(loop.run_in_executor(executor, await User(url,
-                        config, conn)))
-                else:
-                    logme.debug(__name__+':Multi:notUser-full-Run')
-                    futures.append(loop.run_in_executor(executor, await Tweet(url,
-                        config, conn)))
-            logme.debug(__name__+':Multi:asyncioGather')
-            await asyncio.gather(*futures)
-    except Exception as e:
-        # TODO: fix error not error
-        # print(str(e) + " [x] get.Multi")
-        # will return "'NoneType' object is not callable"
-        # but still works
-        # logme.critical(__name__+':Multi:' + str(e))
-        pass
+        logme.debug(__name__+':Multi:notUser-full-Run')
+        futures.append(Tweet(url, config, conn))
+    logme.debug(__name__+':Multi:asyncioGather')
+    await asyncio.gather(*futures)
 
     return count

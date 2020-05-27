@@ -3,6 +3,7 @@ from re import findall
 from json import loads
 
 import logging as logme
+import lxml
 
 def Follow(response):
     logme.debug(__name__+':Follow')
@@ -24,7 +25,8 @@ def Mobile(response):
     try:
         max_id = findall(r'max_id=(.*?)">', str(max_id))[0]
     except Exception as e:
-        logme.critical(__name__+':Mobile:' + str(e))
+        print(__file__,':Mobile:' + str(e))
+        ...
 
     return tweets, max_id
 
@@ -32,7 +34,7 @@ def profile(response):
     logme.debug(__name__+':profile')
     json_response = loads(response)
     html = json_response["items_html"]
-    soup = BeautifulSoup(html, "html.parser")
+    soup = BeautifulSoup(html, "lxml")
     feed = soup.find_all("div", "tweet")
 
     return feed, feed[-1]["data-item-id"]
