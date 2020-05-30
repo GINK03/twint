@@ -42,11 +42,15 @@ class Twint:
         logme.debug(__name__+':Twint:Feed')
         consecutive_errors_count = 0
         self.feed = []
-        for i in range(1): 
+        while True:
             response = await get.RequestUrl(self.config, self.init, headers=[("User-Agent", self.user_agent)])
+            if response is None:
+                time.sleep(0.015)
+                continue
             _feed, self.init = feed.Mobile(response)
             self.feed += _feed
-            time.sleep(4.5)
+            time.sleep(0.5)
+            break
         
     async def follow(self):
         await self.Feed()
@@ -110,6 +114,7 @@ class Twint:
             logme.debug(__name__+':Twint:main:username')
             url = f"https://twitter.com/{self.config.Username}?lang=en"
             self.config.User_id = await get.User(url, self.config, self.conn, True)
+            print(f"{__name__}:{self.config.Username}'s user_id = {self.config.User_id}")
             if self.config.User_id is None:
                 raise ValueError("Cannot find twitter account with name = " + self.config.Username)
 

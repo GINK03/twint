@@ -98,33 +98,35 @@ async def RequestUrl(config, init, headers = []):
     params = []
     _url = ""
 
-    if config.Profile:
-        if config.Profile_full:
-            logme.debug(__name__+':RequestUrl:Profile_full')
-            _url = await url.MobileProfile(config.Username, init)
-        else:
-            logme.debug(__name__+':RequestUrl:notProfile_full')
-            _url = await url.Profile(config.Username, init)
-        _serialQuery = _url
-    elif config.TwitterSearch:
-        logme.debug(__name__+':RequestUrl:TwitterSearch')
-        _url, params, _serialQuery = await url.Search(config, init)
-    else:
-        if config.Following:
-            logme.debug(__name__+':RequestUrl:Following')
-            _url = await url.Following(config.Username, init)
-        elif config.Followers:
-            logme.debug(__name__+':RequestUrl:Followers')
-            _url = await url.Followers(config.Username, init)
-        else:
-            logme.debug(__name__+':RequestUrl:Favorites')
-            _url = await url.Favorites(config.Username, init)
-        _serialQuery = _url
 
-    response = await Request(_url, params=params, connector=_connector, headers=headers)
+    try:
+        if config.Profile:
+            if config.Profile_full:
+                logme.debug(__name__+':RequestUrl:Profile_full')
+                _url = await url.MobileProfile(config.Username, init)
+            else:
+                logme.debug(__name__+':RequestUrl:notProfile_full')
+                _url = await url.Profile(config.Username, init)
+            _serialQuery = _url
+        elif config.TwitterSearch:
+            logme.debug(__name__+':RequestUrl:TwitterSearch')
+            _url, params, _serialQuery = await url.Search(config, init)
+        else:
+            if config.Following:
+                logme.debug(__name__+':RequestUrl:Following')
+                _url = await url.Following(config.Username, init)
+            elif config.Followers:
+                logme.debug(__name__+':RequestUrl:Followers')
+                _url = await url.Followers(config.Username, init)
+            else:
+                logme.debug(__name__+':RequestUrl:Favorites')
+                _url = await url.Favorites(config.Username, init)
+            _serialQuery = _url
 
-    if config.Debug:
-        print(_serialQuery, file=open("twint-request_urls.log", "a", encoding="utf-8"))
+        response = await Request(_url, params=params, connector=_connector, headers=headers)
+    except Exception as exc:
+        print("!!!", exc)
+        return None
 
     return response
 
@@ -180,26 +182,31 @@ async def Tweet(url, config, conn):
     """
     cacheを有効にする
     """
-    parse = urlparse(url)._replace(query='').geturl()
-    digest = sha224(bytes(parse, "utf8")).hexdigest()
-    HOME = E.get("HOME")
-    if not Path(f"{HOME}/.mnt/cache/twinbee/{digest}").exists():
-        # print(__file__, "URL", url, parse)
-        try:
-            response = await Request(url)
-            soup = BeautifulSoup(response, "lxml")
-            tweets = soup.find_all("div", "tweet")
-            """ 保存 """
-            await Tweets(tweets, config, conn, url)
-        except Exception as e:
-            logme.critical(__name__+':Tweet:' + str(e))
-    else:
-        # こっちはcacheのハンドル
-        # print("recover from caches", config.Username)
-        with open(f"{HOME}/.mnt/cache/twinbee/{digest}", "rb") as fp:
-            data = json.loads(gzip.decompress(fp.read()).decode())
-        write.Json(data, config)
-        
+    try:
+        parse = urlparse(url)._replace(query='').geturl()
+        digest = sha224(bytes(parse, "utf8")).hexdigest()
+        HOME = E.get("HOME")
+        if not Path(f"{HOME}/.mnt/cache/twinbee/{digest}").exists():
+            # print(__file__, "URL", url, parse)
+            try:
+                response = await Request(url)
+                soup = BeautifulSoup(response, "lxml")
+                tweets = soup.find_all("div", "tweet")
+                """ 保存 """
+                await Tweets(tweets, config, conn, url)
+            except Exception as e:
+                logme.critical(__name__+':Tweet:' + str(e))
+        else:
+            # こっちはcacheのハンドル
+            # print("recover from caches", config.Username)
+            with open(f"{HOME}/.mnt/cache/twinbee/{digest}", "rb") as fp:
+                data = json.loads(gzip.decompress(fp.read()).decode())
+            write.Json(data, config)
+    except Exception as exc:
+        tb_lineno = sys.exc_info()[2].tb_lineno
+        print(f"[{__name__}] exc = {exc}, tb_lineno = {tb_lineno}")
+        raise Exception(exc)
+import sys
 async def User(url, config, conn, user_id = False):
     logme.debug(__name__+':User')
     _connector = get_connector(config)
@@ -210,7 +217,13 @@ async def User(url, config, conn, user_id = False):
             return int(inf(soup, "id"))
         await Users(soup, config, conn)
     except Exception as e:
-        logme.critical(__name__+':User:' + str(e))
+        """
+        この例外に入る場合、特定のユーザが既に消去されている場合がある
+        確認した事例:　ユーザによるアカウントの削除, 凍結
+        """
+        tb_lineno = sys.exc_info()[2].tb_lineno
+        # logme.critical(f'{__name__}:User:{e}, tb_lineno = {tb_lineno}, config.Username = {config.Username}')
+        raise Exception(f"ユーザによるアカウントの削除, 凍結, {config.Username}")
 
 def Limit(Limit, count):
     logme.debug(__name__+':Limit')
