@@ -46,6 +46,7 @@ class Twint:
             response = await get.RequestUrl(self.config, self.init, headers=[("User-Agent", self.user_agent)])
             _feed, self.init = feed.Mobile(response)
             self.feed += _feed
+            time.sleep(4.5)
         
     async def follow(self):
         await self.Feed()

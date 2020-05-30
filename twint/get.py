@@ -195,7 +195,7 @@ async def Tweet(url, config, conn):
             logme.critical(__name__+':Tweet:' + str(e))
     else:
         # こっちはcacheのハンドル
-        print("recover from caches", config.Username)
+        # print("recover from caches", config.Username)
         with open(f"{HOME}/.mnt/cache/twinbee/{digest}", "rb") as fp:
             data = json.loads(gzip.decompress(fp.read()).decode())
         write.Json(data, config)
